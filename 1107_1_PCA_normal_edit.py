@@ -9,9 +9,10 @@ import numpy as np
 import cv2
 #%% 
 class PCA():
-    def __init__(self, data, compressionRate):
+    def __init__(self, data, compressionRate, boolReCal = False):
         self.data = data.copy().astype('float32')
         self.compressionRate = compressionRate
+        self.boolReCal = boolReCal
         return
     
     def EvaluateMean(self, y):
@@ -47,7 +48,7 @@ class PCA():
         # step 3: Evaluate the covariance matrix M
         self.covMatrix = self.EvaluateCovarianceMatrix(self.data)
         # step 4: Find eigenvalues and corresponding eigenvectors of M
-        eigenvalues, eigenvectors = self.Cal_Eigen(self.covMatrix) #c, v
+        eigenvalues, eigenvectors = self.Cal_Eigen(self.covMatrix, boolReCal = self.boolReCal) #c, v
         ## sort
         argEigenvals = eigenvalues.argsort()[::-1]
 #        print(len(argEigenvals), argEigenvals)
@@ -85,6 +86,8 @@ if __name__ == '__main__' :
     #%% 共同參數
     pokerFolder = "./pca_poker_data/"
     outputFolder = "./outputFolder/"
+#    pokerFolder = "./poker13/"
+#    outputFolder = "./outputFolder_poker13/"
     
     #%% 讀檔設置
     imgNameList = np.array(os.listdir(pokerFolder))
@@ -98,10 +101,10 @@ if __name__ == '__main__' :
     imgArr = imgArr.reshape(len(imgNameList), rows * cols) / 255
     
     #%% 計算
-    pca = PCA(imgArr, 0.9)
+    pca = PCA(imgArr, 0.9, boolReCal = True)
     D = pca.FLOW()
 #    eigenvalues, eigenvectors = pca.eigenvalues, pca.eigenvectors
-#    p = pca.p
+    p = pca.p
     output = pca.Recover(D)
     print("PCA 計算完成,", round(time.time() - startTime, 4), "sec")
     
