@@ -68,7 +68,7 @@ class PCA():
 #            print(sumOfP)
             if sumOfP >= self.compressionRate * sumOfEigenvals:
                 break
-        self.p = i
+        self.p = i +1 # 取的個數，因為在 :p 要取 p 個，所以要 +1
         # step 6: Project each of the vectors in {x1, x2, …, xk} on the space spanned by the first p eigenvectors
         self.D = np.dot(eigenvectors[:, :self.p].T, self.data.T)
         
@@ -101,7 +101,7 @@ if __name__ == '__main__' :
     imgArr = imgArr.reshape(len(imgNameList), rows * cols) / 255
     
     #%% 計算
-    pca = PCA(imgArr, 0.9, boolReCal = True)
+    pca = PCA(imgArr, 0.9, boolReCal = False)
     D = pca.FLOW()
 #    eigenvalues, eigenvectors = pca.eigenvalues, pca.eigenvectors
     p = pca.p
