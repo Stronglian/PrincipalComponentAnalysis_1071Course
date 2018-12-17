@@ -9,10 +9,12 @@ import numpy as np
 import cv2
 #%% 
 class PCA():
-    def __init__(self, data, compressionRate, boolReCal = False):
+    def __init__(self, data, compressionRate, boolReCal = False, dims = 0):
         self.data = data.copy().astype('float32')
         self.compressionRate = compressionRate
         self.boolReCal = boolReCal
+        
+        self.dims = dims
         return
     
     def EvaluateMean(self, y):
@@ -27,8 +29,8 @@ class PCA():
 #        return np.cov(data.T)
     
     def Cal_Eigen(self, covMatrix, boolReCal = False):
-        npyName_val = "Cal_Eigen_val.npy"
-        npyName_vec = "Cal_Eigen_vec.npy"
+        npyName_val = str(self.dims) + "_Cal_Eigen_val.npy"
+        npyName_vec = str(self.dims) + "_Cal_Eigen_vec.npy"
         if os.path.exists(npyName_val) and os.path.exists(npyName_vec) and (not boolReCal):
             eigenvalues  =  np.load(npyName_val)
             eigenvectors =  np.load(npyName_vec)
@@ -40,7 +42,7 @@ class PCA():
             np.save(npyName_vec, eigenvectors)
         return eigenvalues, eigenvectors
     
-    def FLOW(self):
+    def FLOW_1dim(self):
         # step 1
         self.y_mean = self.EvaluateMean(self.data)
         # step 2
@@ -76,7 +78,7 @@ class PCA():
         self.eigenvalues, self.eigenvectors = eigenvalues, eigenvectors
         return self.D
     
-    def Recover(self, D):
+    def Recover_1dim(self, D):
         # step 7: Recover approximate face image for each yi:
         return np.dot(D.T, self.eigenvectors[:, :self.p].T) + self.y_mean
 #%% 
@@ -85,34 +87,43 @@ if __name__ == '__main__' :
     startTime = time.time()
     #%% 共同參數
     pokerFolder = "./poker_card_colorful/"
-    outputFolder = "./outputFolder_0.8(colorful)/"
+    compressionRate = 0.8
+    outputFolder = "./outputFolder_"+str(compressionRate)+"(colorful)/"
 #    pokerFolder = "./poker13/"
 #    outputFolder = "./outputFolder_poker13/"
     
     #%% 讀檔設置
+    ###### 檔名 - 再處理非讀取資料的問題
     imgNameList = np.array(os.listdir(pokerFolder))
-    imgNameList = imgNameList[np.argsort([int(na.split(".")[0]) for na in imgNameList ], axis = 0)]
-    tmp = cv2.imread(pokerFolder + imgNameList[0], 0)
+    imgNameList = imgNameList[np.argsort([int(na.split(".", 1)[0]) for na in imgNameList ], axis = 0)]
+    imgFilenameExtension = '.' + imgNameList[0].rsplit(".", 1)[-1]
+    ###### 取用首張圖片格式
+    tmp = cv2.imread(pokerFolder + imgNameList[0], 1)
     rows, cols = tmp.shape[:2]
     if len(tmp.shape) >= 3:
         dims = tmp.shape[2]
     else:
         dims = 1
-    
-    imgArr = np.zeros((len(imgNameList), rows, cols))
+    ###### 蒐集成 Array
+    imgArr = np.zeros((len(imgNameList), rows, cols, dims))
     for i, name in enumerate(imgNameList):
-        imgArr[i, :, :] = cv2.imread(pokerFolder + name, 0).copy()
-    imgArr = imgArr.reshape(len(imgNameList), rows * cols * dims) / 255
+        imgArr[i, :, :] = cv2.imread(pokerFolder + name, 1).copy()
+    ###### 預處理
+    imgArr = imgArr.reshape(len(imgNameList), rows * cols, dims) / 255
     
     #%% 計算
-    pca = PCA(imgArr, 0.9, boolReCal = False)
-    D = pca.FLOW()
-#    eigenvalues, eigenvectors = pca.eigenvalues, pca.eigenvectors
-    p = pca.p
-    output = pca.Recover(D)
-    print("PCA 計算完成,", round(time.time() - startTime, 4), "sec")
+    output = np.zeros_like(imgArr)
+    for i in range(dims):
+        pca = PCA(imgArr[:, :, i], compressionRate, boolReCal = False, dims = i)
+        D = pca.FLOW_1dim()
+    #    eigenvalues, eigenvectors = pca.eigenvalues, pca.eigenvectors
+        p = pca.p
+        print("p:", p)
+        output[:, :, i] = pca.Recover_1dim(D).copy()
+        print("PCA", i, "計算完成,", round(time.time() - startTime, 4), "sec")
     
     #%% 算 MSE
+    ###### 後處理
     output = np.clip(output, 0, 1)
     imgArr = imgArr * 255
     output = output * 255
@@ -122,14 +133,16 @@ if __name__ == '__main__' :
     print("MSE 計算完成,", round(time.time() - startTime, 4), "sec")
     
     #%% 輸出
-    output = output.reshape(len(imgNameList), rows, cols) #.astype("int")
+    ###### 後處理 - shape 復原
+    output = output.reshape(len(imgNameList), rows, cols, dims) #.astype("uint8")
     if os.path.exists(outputFolder):
         for idx, img in enumerate(output):
-            cv2.imwrite(outputFolder + str(idx+1) + ".bmp", img)
+#            cv2.imwrite(outputFolder + str(idx+1) + imgFilenameExtension, img)
+            cv2.imwrite(outputFolder + imgNameList[idx], img)
     print("影像輸出完成,", round(time.time() - startTime, 4), "sec")
     
-    #%% 算 MSE
-    UimgArr = imgArr.reshape(len(imgNameList), rows * cols).astype("uint8")
-    Uoutput = output.reshape(len(imgNameList), rows * cols).astype("uint8")
+    #%% 算 MSE - shape 復原後
+    UimgArr = imgArr.reshape(len(imgNameList), rows * cols * dims).astype("uint8")
+    Uoutput = output.reshape(len(imgNameList), rows * cols * dims).astype("uint8")
     Umse = ( np.square(UimgArr - Uoutput)).mean() #(axis = 1)
     print("MSE:",Umse)
