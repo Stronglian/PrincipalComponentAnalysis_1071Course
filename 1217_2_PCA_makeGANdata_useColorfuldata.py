@@ -29,8 +29,8 @@ class PCA():
 #        return np.cov(data.T)
     
     def Cal_Eigen(self, covMatrix, boolReCal = False):
-        npyName_val = str(self.dims) + "_Cal_Eigen_val.npy"
-        npyName_vec = str(self.dims) + "_Cal_Eigen_vec.npy"
+        npyName_val = "Cal_Eigen_val"+ str(self.compressionRate) + "_" + str(self.dims)+".npy"
+        npyName_vec = "Cal_Eigen_vec"+ str(self.compressionRate) + "_" + str(self.dims)+".npy"
         if os.path.exists(npyName_val) and os.path.exists(npyName_vec) and (not boolReCal):
             eigenvalues  =  np.load(npyName_val)
             eigenvectors =  np.load(npyName_vec)
@@ -87,7 +87,7 @@ if __name__ == '__main__' :
     startTime = time.time()
     #%% 共同參數
     pokerFolder = "./poker_card_colorful/"
-    compressionRate = 0.8
+    compressionRate = 1
     outputFolder = "./outputFolder_"+str(compressionRate)+"(colorful)/"
 #    pokerFolder = "./poker13/"
 #    outputFolder = "./outputFolder_poker13/"
