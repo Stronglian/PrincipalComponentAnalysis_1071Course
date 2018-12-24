@@ -86,6 +86,8 @@ if __name__ == '__main__' :
     #%% 共同參數
     pokerFolder = "./pca_poker_data/"
     outputFolder = "./outputFolder/"
+    if not os.path.isdir(outputFolder):
+        os.mkdir(outputFolder)
 #    pokerFolder = "./poker13/"
 #    outputFolder = "./outputFolder_poker13/"
     
